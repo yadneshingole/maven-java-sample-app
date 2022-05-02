@@ -1,53 +1,60 @@
-pipeline {
-    agent {
-        docker {
-     image 'wroquem/open-jdk:1.8'
+pipeline{
+    agent any
+    
+    stages{
+    
+    stage('Checkout')
+    {
+        steps
+        {
+        git branch: 'master' , url:'https://github.com/yadneshingole/maven-java-sample-app.git'
+        }
     }
+    
+    stage('Build')
+    {
+        steps
+        {
+            sh 'mvn compile'
+        }
+    }
+    
+    stage('Test')
+    {
+        steps
+        {
+            sh 'mvn test'
+        }
+    }
+    stage('Package')
+    {
+        steps
+        {
+        sh 'mvn package'
+        }
+        post {
+  always {
+    // One or more steps need to be included within each condition's block.
+    junit '/target/surefire-reports/*.xml'
+        }
         
-    }
-
-    stages {
-        stage('Build'){
-            steps {
-                powershell 'mvn compile'
-            }
-        }
-
-        stage('Test'){
-            steps {
-                powershell 'mvn test'
-            }
-        }
-
-        stage('Package'){
+        success {
+            archiveArtifacts artifacts: '/target/*.jar', followSymlinks: false
             
-        steps {
-                powershell 'mvn package'
-           }
-
-         post {
-            always {
-                junit 'target/surefire-reports/TEST-*.xml'
-            }
-            success {
-                archiveArtifacts artifacts: 'target/*.jar', followSymlinks: false
-            }
         }
-        
+}
+    }
+    
+        stage('Deploy')
+    {
+        steps
+        {
+        withEnv(['JENKINS_NODE_COOKIE=doKillMe']){
+            
+            sh ' nohup java -jar -Dserver.port=8001 target/spring-petclinic-2.3.1.BUILD-SNAPSHOT.jar &'
         }
-
-        stage('Deploy'){
-            steps {
-
-                withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
-
-                powershell '& java "-Dserver.port=8001" -jar target/spring-petclinic-2.3.1.BUILD-SNAPSHOT.jar'
-
-                }
-            }
         }
     }
-
-
-
+    
+ }
 }
